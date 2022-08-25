@@ -12,6 +12,28 @@ export const render = (element, container) => {
       const value = element.props[name];
       dom[name] = value;
     });
+
   element.props.children.forEach(child => render(child, dom));
+
   container.appendChild(dom);
+}
+
+
+let nextUnitOfWork = null;
+
+function workLoop(deadline) {
+  let shouldYield = false;
+  while (nextUnitOfWork && !shouldYield) {
+    // 执行渲染 并返回下一次渲染的工作
+    nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
+    shouldYield = deadline.timeRemaining() < 1;
+  }
+  // 没有足够的时间，请求下一次浏览器空闲时执行
+  requestIdleCallback(workLoop);
+}
+
+requestIdleCallback(workLoop);
+
+function performUnitOfWork(nextUnitOfWork) {
+  // TODO
 }
