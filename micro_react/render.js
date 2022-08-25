@@ -1,23 +1,31 @@
+// 递归渲染 -> 阻塞浏览器【js线程和浏览器GUI线程无法并行】
 export const render = (element, container) => {
-  const dom = element.type == 'TEXT_ELEMENT'
+  // this is a fiber：渲染的一个单元
+  nextUnitOfWork = {
+    dom: container,
+    props: {
+      children: [element]
+    },
+    sibling: null,
+    child: null,
+    parent: null
+  };
+}
+
+function createDom(fiber) {
+  const dom = fiber.type == 'TEXT_ELEMENT'
     ? document.createTextNode('')
-    : document.createElement(element.type);
+    : document.createElement(fiber.type);
 
   const isProperty = key => key !== 'children';
 
-  Object.keys(element.props).
+  Object.keys(fiber.props).
     filter(isProperty).
     forEach(name => {
-      console.log('name=', name, ',value=', element.props[name]);
-      const value = element.props[name];
-      dom[name] = value;
+      dom[name] = fiber.props[name];
     });
-
-  element.props.children.forEach(child => render(child, dom));
-
-  container.appendChild(dom);
+  return dom;
 }
-
 
 let nextUnitOfWork = null;
 
@@ -34,6 +42,8 @@ function workLoop(deadline) {
 
 requestIdleCallback(workLoop);
 
-function performUnitOfWork(nextUnitOfWork) {
-  // TODO
+function performUnitOfWork(fiber) {
+  // 节点的多个自己点以 sibling 节点链在一起
+  // 渲染时先往下挨个渲染到最底层的 fiber ，之后再渲染 sibling ，最后往上挨个渲染当前层的 sibling
+ 
 }
