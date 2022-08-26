@@ -1,13 +1,15 @@
 const isProperty = (key) => key !== "children";
 
 let nextUnitOfWork = null;
+// work in progress
+let wipRoot = null;
 
 requestIdleCallback(workLoop);
 
 // 递归渲染 -> 阻塞浏览器【js线程和浏览器GUI线程无法并行】
 export const render = (element, container) => {
   // this is a fiber：渲染的一个单元
-  nextUnitOfWork = {
+  wipRoot = {
     dom: container,
     props: {
       children: [element],
@@ -16,6 +18,7 @@ export const render = (element, container) => {
     child: null,
     parent: null,
   };
+  nextUnitOfWork = wipRoot;
 };
 
 function workLoop(deadline) {
@@ -27,11 +30,15 @@ function workLoop(deadline) {
   }
   // 没有足够的时间，请求下一次浏览器空闲时执行
   requestIdleCallback(workLoop);
+  // 更新结束时进行同步提交
+  if (!nextUnitOfWork && wipRoot) commitRoot();
 }
 
 function performUnitOfWork(fiber) {
+  // 异步创建和渲染 dom 节点，会被打断
   if (!fiber.dom) fiber.dom = createDom(fiber);
-  if (fiber.parent) fiber.parent.dom.append(fiber.dom);
+  // if (fiber.parent) fiber.parent.dom.append(fiber.dom);
+
   const elements = fiber.props.children;
   let prevFiber = null;
   let index = 0;
@@ -73,4 +80,18 @@ function createDom(fiber) {
       dom[name] = fiber.props[name];
     });
   return dom;
+}
+
+function commitRoot() {
+  commitWork(wipRoot.child);
+  wipRoot = null;
+}
+
+// 递归提交
+function commitWork(fiber) {
+  if (!fiber) return;
+  const domParent = fiber.parent.dom;
+  domParent.appendChild(fiber.dom);
+  commitWork(fiber.child);
+  commitWork(fiber.sibling);
 }
