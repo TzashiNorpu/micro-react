@@ -1,6 +1,8 @@
 import { render } from "./micro_react";
 import { createElement } from "./micro_react";
 
+const container = document.querySelector("#app");
+
 /* const element = createElement(
   'h1',
   {style: 'background-color:skyblue;color:red', id: 'title'},
@@ -10,17 +12,12 @@ import { createElement } from "./micro_react";
     {href: 'https://www.bilibili.com', style: 'color:yellow'},
     'Bilibili')
 );
-
 console.log(element);
+render(element, container); */
 
-const node = document.querySelector("#app");
-render(element, node); */
-
-const handleChange = (e) => {
+/* const handleChange = (e) => {
   renderx(e.target.value);
 };
-
-const container = document.querySelector("#app");
 
 const renderx = (value) => {
   console.log(1);
@@ -39,4 +36,10 @@ const renderx = (value) => {
   render(element, container);
 };
 
-renderx("Hello");
+renderx("Hello"); */
+
+const App = (props) => {
+  return createElement("h1", null, "Hixxx", props.name);
+};
+const element = createElement(App, { name: "kelvin" });
+render(element, container);

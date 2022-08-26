@@ -46,9 +46,12 @@ function workLoop(deadline) {
 function performUnitOfWork(fiber) {
   // 异步创建和渲染 dom 节点，会被打断[单个fiber的创建和和append不会被打断，但是不同fiber之间的
   // append 会被打断，导致视图bug，所以createDom防止这里没有问题]
-  if (!fiber.dom) fiber.dom = createDom(fiber);
+  /* if (!fiber.dom) fiber.dom = createDom(fiber);
   // if (fiber.parent) fiber.parent.dom.append(fiber.dom);
-  reconcileChildren(fiber, fiber.props.children);
+  reconcileChildren(fiber, fiber.props.children); */
+  const isFunction = fiber.type instanceof Function;
+  if (isFunction) updateFunctionComponent(fiber);
+  else updateHostComponent(fiber);
   /* const elements = fiber.props.children;
   let prevFiber = null;
   let index = 0;
@@ -76,6 +79,16 @@ function performUnitOfWork(fiber) {
     if (nextFiber.sibling) return nextFiber.sibling;
     nextFiber = nextFiber.parent;
   }
+}
+
+function updateHostComponent(fiber) {
+  if (!fiber.dom) fiber.dom = createDom(fiber);
+  reconcileChildren(fiber, fiber.props.children);
+}
+
+function updateFunctionComponent(fiber) {
+  const children = [fiber.type(fiber.props)];
+  reconcileChildren(fiber, children);
 }
 
 function reconcileChildren(wipFiber, elements) {
@@ -157,19 +170,28 @@ function commitRoot() {
 // 递归提交
 function commitWork(fiber) {
   if (!fiber) return;
+  let domParentFiber = fiber.parent;
+  // 函数式组件处理:找到最近的非空父节点
+  while (!domParentFiber.dom) domParentFiber = domParentFiber.parent;
   // if (!fiber.dom) fiber.dom = createDom(fiber);
-  const domParent = fiber.parent.dom;
+  const domParent = domParentFiber.dom;
   // domParent.appendChild(fiber.dom);
   if (fiber.effectTag === "PLACEMENT" && fiber.dom) {
     domParent.appendChild(fiber.dom);
   } else if (fiber.effectTag === "DELETION" && fiber.dom) {
-    domParent.removeChild(fiber.dom);
+    // domParent.removeChild(fiber.dom);
+    commitDeletion(fiber, domParent);
   } else if (fiber.effectTag === "UPDATE" && fiber.dom) {
     // dom，之前的props，现在的props
     updateDOM(fiber.dom, fiber.alternate.props, fiber.props);
   }
   commitWork(fiber.child);
   commitWork(fiber.sibling);
+}
+
+function commitDeletion(fiber, domParent) {
+  if (fiber.dom) domParent.removeChild(fiber.dom); // 非函数式组件
+  else commitDeletion(fiber.child, domParent);
 }
 
 function updateDOM(dom, prevProps, nextPorps) {
